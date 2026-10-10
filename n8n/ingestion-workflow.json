@@ -1,0 +1,199 @@
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ingest",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e99dbe7e-9393-407c-a6c8-31f2013d0fdf",
+      "name": "Webhook",
+      "webhookId": "c9445920-c74a-4f46-afab-3d13a5c6c528"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"ok\", \"message\": \"Webhook received successfully\" } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1344,
+        0
+      ],
+      "id": "5a1e755e-7584-4058-8a18-fc5ec5a2befc",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "file",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "f8322476-6bcc-4186-898a-7386fe56e16e",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst text = $input.first().json.text || '';\nconst fileName = $('Webhook').first().binary.file.fileName;\n\nconst words = text.split(/\\s+/).filter(Boolean);\n\nif (words.length === 0) {\n  throw new Error('No text found in PDF. Is it scanned?');\n}\n\nconst size = 200;\nconst overlap = 30;\nconst chunks = [];\n\nfor (let i = 0; i < words.length; i += size - overlap) {\n  chunks.push(words.slice(i, i + size).join(' '));\n\n  if (i + size >= words.length) break;\n}\n\nreturn [{\n  json: {\n    file_name: fileName,\n    chunks\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "3622fc00-755a-477b-a348-a6ab0a220c1b",
+      "name": "Chunk text"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/embed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"texts\": $json.chunks } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        0
+      ],
+      "id": "e737a2d7-962d-4e2e-a16e-fef06fb169b5",
+      "name": "Embed"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst { file_name, chunks } = $('Chunk text').first().json;\nconst embeddings = $input.first().json.embeddings;\n\nif (!embeddings || embeddings.length !== chunks.length) {\n  throw new Error('Chunk count does not match embedding count');\n}\n\nconst rows = chunks.map((content, i) => ({\n  file_name,\n  content,\n  embedding: embeddings[i],\n}));\n\nreturn [{ json: { rows } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "e8c196ab-9028-4c0b-a71f-5cab6bc85b0b",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zmloqsajmrzdzmhwgodw.supabase.co/rest/v1/documents",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "=\n{\n  \"apikey\": \"YOUR_SUPABASE_SERVICE_KEY\",\n  \"Authorization\": \"Bearer YOUR_SUPABASE_SERVICE_KEY\",\n  \"Prefer\": \"return=minimal\"\n}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.rows }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "09914747-cc6f-4214-b9df-017649b24759",
+      "name": "Save to Supabase"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Chunk text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunk text": {
+      "main": [
+        [
+          {
+            "node": "Embed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embed": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Save to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "adfe9259-8ff1-4498-af2b-8d1370732143",
+  "meta": {
+    "instanceId": "84b32470dfcc211a5f7fcd26a4f588e9bd6656ceb68968b4bee52e214c9a50ea"
+  },
+  "nodeGroups": [],
+  "id": "B3leRWLHWvS6XfPw",
+  "tags": []
+}

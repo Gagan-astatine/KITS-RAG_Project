@@ -98,7 +98,7 @@
         "url": "https://zmloqsajmrzdzmhwgodw.supabase.co/rest/v1/documents",
         "sendHeaders": true,
         "specifyHeaders": "json",
-        "jsonHeaders": "=\n{\n  \"apikey\": \"YOUR_SUPABASE_SERVICE_KEY\",\n  \"Authorization\": \"Bearer YOUR_SUPABASE_SERVICE_KEY\",\n  \"Prefer\": \"return=minimal\"\n}",
+        "jsonHeaders": "=\n{\n  \"apikey\": \"SUPABASE_SERVICE_KEY\",\n  \"Authorization\": \"Bearer YOUR_SUPABASE_SERVICE_KEY\",\n  \"Prefer\": \"return=minimal\"\n}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json.rows }}",

@@ -1,0 +1,10 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Literata", serif;
+  background: transparent;
+  color: #f3f4f6;
+}
